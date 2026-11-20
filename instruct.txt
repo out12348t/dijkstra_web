@@ -1,0 +1,3 @@
+B1: tải và extract về máy
+B2: mở terminal
+B3: chạy lệnh: python app.python
