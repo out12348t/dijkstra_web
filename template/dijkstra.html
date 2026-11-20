@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dijkstra Graph Analyzer</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet" />
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+ <link rel="stylesheet" href="free.css">
+</head>
+<body>
+
+<div class="app-container">
+  <!-- HEADER -->
+  <div class="hero-header">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-3">
+        <div class="p-2 rounded-3" style="background: rgba(255,255,255,0.12);">
+          <i class="bi bi-diagram-3-fill fs-2 text-info"></i>
+        </div>
+        <div>
+          <h3 class="mb-0 fw-bold">Dijkstra Graph Analyzer</h3>
+          <small class="text-light opacity-75">Nhận diện đồ thị từ ảnh • Tìm đường đi ngắn nhất</small>
+        </div>
+      </div>
+      <!-- Ô nhập API Key nhanh trên giao diện -->
+      <div class="input-group input-group-sm" style="max-width: 280px;">
+        <span class="input-group-text bg-dark text-info border-secondary"><i class="bi bi-key-fill"></i></span>
+        <input type="password" id="apiKeyInput" class="form-control bg-dark text-white border-secondary" placeholder="Nhập Gemini API Key..." />
+      </div>
+    </div>
+
+    <!-- MENU NAVIGATION -->
+    <div class="nav-menu">
+      <div class="nav-item-btn active" onclick="switchPage('home', this)">
+        <i class="bi bi-house-door-fill"></i> Trang chủ
+      </div>
+      <div class="nav-item-btn" onclick="switchPage('guide', this)">
+        <i class="bi bi-book-fill"></i> Hướng dẫn
+      </div>
+      <div class="nav-item-btn" onclick="switchPage('about', this)">
+        <i class="bi bi-info-circle-fill"></i> Giới thiệu
+      </div>
+    </div>
+  </div>
+
+  <!-- TRANG CHỦ -->
+  <div id="page-home" class="p-4">
+    <div class="row g-4">
+      <!-- CỘT TRÁI -->
+      <div class="col-lg-5">
+        <!-- BƯỚC 1 -->
+        <div class="panel-card">
+          <div class="fw-bold mb-1"><span class="step-badge">1</span> Tải ảnh đồ thị</div>
+          <p class="text-muted small mb-3">Chọn ảnh hoặc kéo thả file vào đây (Gemini 2.0 Flash-Lite)</p>
+          <div class="upload-zone" onclick="document.getElementById('imageInput').click()">
+            <i class="bi bi-cloud-arrow-up fs-1 text-primary"></i>
+            <div class="fw-semibold text-primary mt-1">Kéo thả ảnh vào đây hoặc chọn file</div>
+            <div class="text-muted small">Hỗ trợ: PNG, JPG, JPEG</div>
+            <input type="file" id="imageInput" accept="image/*" hidden onchange="handleImageUpload(event)" />
+          </div>
+          <div id="loadingStatus" class="text-center text-primary small fw-semibold mt-2 d-none">
+            <span class="spinner-border spinner-border-sm me-1"></span> AI đang nhận diện đồ thị...
+          </div>
+        </div>
+
+        <!-- BƯỚC 2 -->
+        <div class="panel-card">
+          <div class="fw-bold mb-1"><span class="step-badge">2</span> Kiểm tra đồ thị</div>
+          <p class="text-muted small mb-2">Xem và chỉnh sửa dữ liệu bên bảng phải nếu cần</p>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="isDirectedCheck" checked onchange="renderGraph()" />
+            <label class="form-check-label small fw-semibold" for="isDirectedCheck">Đồ thị có hướng (mũi tên)</label>
+          </div>
+          <button class="btn btn-soft-purple w-100" onclick="renderGraph()">
+            <i class="bi bi-arrow-clockwise me-1"></i> Hiển thị lại đồ thị
+          </button>
+        </div>
+
+        <!-- BƯỚC 3 -->
+        <div class="panel-card">
+          <div class="fw-bold mb-3"><span class="step-badge">3</span> Chạy thuật toán Dijkstra</div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-semibold">Đỉnh nguồn:</label>
+              <select id="startNodeSelect" class="form-select"></select>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-semibold">Đỉnh đích:</label>
+              <select id="endNodeSelect" class="form-select"></select>
+            </div>
+          </div>
+          <button class="btn btn-purple w-100" onclick="handleRunDijkstra()">
+            <i class="bi bi-play-fill me-1"></i> Tìm đường đi ngắn nhất
+          </button>
+        </div>
+
+        <!-- KẾT QUẢ -->
+        <div class="panel-card mb-0">
+          <div class="fw-bold mb-2 text-success">
+            <i class="bi bi-check-circle-fill me-1"></i> Kết quả
+          </div>
+          <ul class="nav nav-tabs nav-fill small mb-3" role="tablist">
+            <li class="nav-item">
+              <button class="nav-link active fw-semibold" data-bs-toggle="tab" data-bs-target="#tabPath">Đường đi</button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link fw-semibold" data-bs-toggle="tab" data-bs-target="#tabDist">Bảng khoảng cách</button>
+            </li>
+          </ul>
+          <div class="tab-content">
+            <div class="tab-pane fade show active" id="tabPath">
+              <div id="pathResultBox" class="result-box">
+                <div class="small mb-1">Đường đi ngắn nhất từ <b>A</b> đến <b>D</b>:</div>
+                <h5 class="fw-bold mb-1">A → C → B → D</h5>
+                <div class="fw-bold small">Tổng trọng số: <span>6</span></div>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="tabDist">
+              <table class="table table-sm table-bordered text-center mb-0 bg-white">
+                <thead><tr><th>Đỉnh</th><th>Khoảng cách ngắn nhất</th></tr></thead>
+                <tbody id="distTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CỘT PHẢI -->
+      <div class="col-lg-7">
+        <div class="panel-card bg-white">
+          <div class="fw-bold mb-2 text-primary">
+            <i class="bi bi-share-fill me-1"></i> Đồ thị
+          </div>
+          <div id="graphCanvas"></div>
+        </div>
+
+        <div class="panel-card bg-white">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="fw-bold text-primary"><i class="bi bi-bar-chart-fill me-1"></i> Bảng dữ liệu đồ thị</div>
+            <button class="btn btn-sm btn-outline-primary" onclick="addEdgeRow()">+ Thêm cạnh</button>
+          </div>
+          <div class="table-responsive" style="max-height: 250px;">
+            <table class="table table-bordered align-middle text-center mb-0">
+              <thead class="table-header-custom">
+                <tr>
+                  <th>Từ</th>
+                  <th>Đến</th>
+                  <th>Trọng số</th>
+                  <th style="width: 50px;">Xóa</th>
+                </tr>
+              </thead>
+              <tbody id="edgesTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel-card mb-0">
+          <div class="fw-bold mb-2"><i class="bi bi-lightbulb-fill text-warning me-1"></i> Thông tin thêm</div>
+          <ul class="list-unstyled small mb-0 text-secondary">
+            <li class="mb-1"><i class="bi bi-check2 text-success fw-bold me-2"></i>Hỗ trợ đồ thị có hướng và vô hướng</li>
+            <li class="mb-1"><i class="bi bi-check2 text-success fw-bold me-2"></i>Xử lý trọng số nguyên không âm</li>
+            <li><i class="bi bi-check2 text-success fw-bold me-2"></i>Hiển thị trực quan kết quả</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB HƯỚNG DẪN -->
+  <div id="page-guide" class="p-4 d-none">
+    <h5>Hướng dẫn sử dụng</h5>
+    <ol>
+      <li>Dán <b>Gemini API Key</b> vào ô góc trên bên phải (chỉ cần nhập 1 lần, trình duyệt sẽ tự lưu).</li>
+      <li>Tải lên hình ảnh đồ thị rõ nét (có nhãn đỉnh và số trọng số trên cạnh).</li>
+      <li>Kiểm tra hoặc chỉnh sửa lại bảng dữ liệu bên phải, chọn <b>Đỉnh nguồn</b> và <b>Đỉnh đích</b> rồi bấm <b>Tìm đường đi ngắn nhất</b>.</li>
+    </ol>
+  </div>
+
+  <!-- TAB GIỚI THIỆU -->
+  <div id="page-about" class="p-4 d-none">
+    <h5>Giới thiệu công cụ</h5>
+    <p>Ứng dụng tích hợp <b>Gemini 2.0 Flash-Lite Vision API</b> để trích xuất dữ liệu đồ thị từ hình ảnh và cài đặt thuật toán <b>Dijkstra</b> tìm đường đi ngắn nhất.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="dijkstra.js"></script>
+
+</body>
+</html>
